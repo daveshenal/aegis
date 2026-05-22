@@ -11,7 +11,7 @@ Multi-agent research synthesis system using LangGraph, Gemini, LlamaIndex, and P
 ## Project Structure - Expanded (for initial dev)
 
 ```text
-agentic-research-system/
+aegis/
 │
 ├── .github/
 │   └── workflows/
