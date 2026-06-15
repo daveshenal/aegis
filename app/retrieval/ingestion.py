@@ -4,19 +4,10 @@ import os
 from llama_index.core import SimpleDirectoryReader, VectorStoreIndex, StorageContext
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.vector_stores.pinecone import PineconeVectorStore
-from llama_index.embeddings.gemini import GeminiEmbedding
 from llama_index.core import Settings as LlamaSettings
 from app.retrieval.pinecone_client import get_pinecone_index
+from app.retrieval.llama_config import configure_llama_settings
 from app.config import settings
-
-
-def _configure_llama_settings():
-    LlamaSettings.embed_model = GeminiEmbedding(
-        model_name="models/text-embedding-004",
-        api_key=settings.GEMINI_API_KEY,
-    )
-    LlamaSettings.chunk_size = 512
-    LlamaSettings.chunk_overlap = 64
 
 
 def ingest_from_s3(s3_key: str) -> int:
@@ -24,7 +15,7 @@ def ingest_from_s3(s3_key: str) -> int:
     Downloads a document from S3, chunks it, embeds it,
     and upserts into Pinecone. Returns number of chunks ingested.
     """
-    _configure_llama_settings()
+    configure_llama_settings()
 
     s3 = boto3.client(
         "s3",
@@ -67,7 +58,7 @@ def ingest_from_local(file_path: str) -> int:
     Ingests a local file directly — used by scripts/ingest_sample_docs.py
     and docker-compose local dev workflow.
     """
-    _configure_llama_settings()
+    configure_llama_settings()
 
     documents = SimpleDirectoryReader(input_files=[file_path]).load_data()
 

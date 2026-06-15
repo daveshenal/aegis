@@ -1,11 +1,10 @@
-import time
 from llama_index.core import VectorStoreIndex
 from llama_index.core.retrievers import VectorIndexRetriever
-from llama_index.core.query_engine import RetrieverQueryEngine
 from llama_index.core.postprocessor import SimilarityPostprocessor
 from llama_index.vector_stores.pinecone import PineconeVectorStore
 from llama_index.core import StorageContext
 from app.retrieval.pinecone_client import get_pinecone_index
+from app.retrieval.llama_config import configure_llama_settings
 from app.graph.state import RetrievedChunk
 
 
@@ -33,6 +32,7 @@ def query_pipeline(
     sub_question_id: str,
     top_k: int = 5,
 ) -> list[RetrievedChunk]:
+    configure_llama_settings()
     retriever = _build_retriever(top_k)
 
     # Postprocessor filters out low-quality chunks below similarity threshold

@@ -12,11 +12,11 @@ langsmith==0.1.77
 # LLM — Gemini
 google-generativeai==0.7.2
 
-# Retrieval — LlamaIndex + Pinecone
-llama-index-core==0.12.0
-llama-index-vector-stores-pinecone==0.3.0
-llama-index-embeddings-gemini==0.3.1
-pinecone-client==3.2.2
+# Retrieval — LlamaIndex + Pinecone (aligned on llama-index-core 0.13.x)
+llama-index-core==0.13.6
+llama-index-vector-stores-pinecone==0.8.0
+llama-index-embeddings-gemini==0.4.2
+pinecone==7.3.0
 
 # AWS
 boto3==1.34.120
