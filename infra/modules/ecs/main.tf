@@ -1,10 +1,3 @@
-variable "project"             { type = string }
-variable "aws_region"          { type = string }
-variable "ecr_image_uri"       { type = string }
-variable "task_role_arn"       { type = string }
-variable "execution_role_arn"  { type = string }
-variable "s3_bucket_name"      { type = string }
-
 # CloudWatch log group — all container stdout goes here
 resource "aws_cloudwatch_log_group" "app" {
   name              = "/ecs/${var.project}"
@@ -107,6 +100,3 @@ resource "aws_ecs_service" "app" {
   deployment_minimum_healthy_percent = 100
   deployment_maximum_percent         = 200
 }
-
-output "cluster_name" { value = aws_ecs_cluster.this.name }
-output "service_name"  { value = aws_ecs_service.app.name }
