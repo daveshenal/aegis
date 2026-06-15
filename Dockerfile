@@ -43,7 +43,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgdk-pixbuf-xlib-2.0-0 \
     libcairo2 \
     shared-mime-info \
-    python3-setuptools \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy virtual environment from builder

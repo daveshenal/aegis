@@ -33,3 +33,4 @@ pydantic-settings==2.7.0
 
 # Utilities
 python-dotenv==1.0.1
+setuptools>=68.0.0
