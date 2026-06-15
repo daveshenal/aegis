@@ -6,7 +6,7 @@ python-multipart==0.0.9
 # LangGraph + LangChain
 langgraph==0.1.19
 langchain==0.2.5
-langchain-core==0.2.9
+langchain-core==0.2.22
 langsmith==0.1.77
 
 # LLM — Gemini
