@@ -1,6 +1,3 @@
-variable "bucket_name" { type = string }
-variable "project"     { type = string }
-
 # Trust policy — allows ECS tasks to assume this role
 data "aws_iam_policy_document" "ecs_trust" {
   statement {
@@ -45,6 +42,3 @@ resource "aws_iam_role_policy_attachment" "execution_policy" {
   role       = aws_iam_role.execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
-
-output "task_role_arn"      { value = aws_iam_role.task_role.arn }
-output "execution_role_arn" { value = aws_iam_role.execution_role.arn }
