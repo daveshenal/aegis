@@ -10,7 +10,7 @@ terraform {
 
   # Remote state — stored in the S3 bucket you created manually
   backend "s3" {
-    bucket = "aegis-tfstate"
+    bucket = "aegis-tfstate-410376035918"
     key    = "prod/terraform.tfstate"
     region = "us-east-1"
   }
