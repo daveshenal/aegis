@@ -10,10 +10,10 @@ variable "project_name" {
 
 variable "ecr_repo_name" {
   type    = string
-  default = "agentic-research-system"
+  default = "aegis"
 }
 
 variable "s3_bucket_name" {
   type    = string
-  default = "agentic-research-docs"
+  default = "aegis-docs-410376035918"
 }
