@@ -11,12 +11,12 @@ _generation_config = genai.GenerationConfig(
 
 # Flash — used for planner, critic, revisor (fast, cheap)
 gemini_flash = genai.GenerativeModel(
-    model_name="gemini-2.0-flash",
+    model_name = settings.GEMINI_FLASH_MODEL,
     generation_config=_generation_config,
 )
 
 # Pro — used for writer (higher quality, more expensive)
 gemini_pro = genai.GenerativeModel(
-    model_name="gemini-2.5-pro",
+    model_name=settings.GEMINI_PRO_MODEL,
     generation_config=_generation_config,
 )
