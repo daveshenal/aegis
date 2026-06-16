@@ -41,6 +41,25 @@ resource "aws_ecs_task_definition" "app" {
       { name = "MLFLOW_TRACKING_URI",   value = "http://localhost:5000" },
     ]
 
+    secrets = [
+      {
+        name      = "GEMINI_API_KEY"
+        valueFrom = "arn:aws:ssm:us-east-1:410376035918:parameter/aegis/GEMINI_API_KEY"
+      },
+      {
+        name      = "PINECONE_API_KEY"
+        valueFrom = "arn:aws:ssm:us-east-1:410376035918:parameter/aegis/PINECONE_API_KEY"
+      },
+      {
+        name      = "PINECONE_INDEX_NAME"
+        valueFrom = "arn:aws:ssm:us-east-1:410376035918:parameter/aegis/PINECONE_INDEX_NAME"
+      },
+      {
+        name      = "LANGCHAIN_API_KEY"
+        valueFrom = "arn:aws:ssm:us-east-1:410376035918:parameter/aegis/LANGCHAIN_API_KEY"
+      },
+    ]
+
     logConfiguration = {
       logDriver = "awslogs"
       options = {
