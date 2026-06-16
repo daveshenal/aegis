@@ -29,13 +29,13 @@ def report_writer_node(state: ResearchState) -> dict:
     latency = round(time.time() - start, 3)
 
     return {
-        "draft_report": response.text,
+        "draft_report": response,
         "revision_count": revision_count + 1,
         "report_metadata": {
             **state.get("report_metadata", {}),
             f"writer_latency_s_pass_{revision_count + 1}": latency,
             f"writer_input_tokens_pass_{revision_count + 1}": len(prompt) // 4,
-            f"writer_output_tokens_pass_{revision_count + 1}": len(response.text) // 4,
+            f"writer_output_tokens_pass_{revision_count + 1}": len(response) // 4,
         },
     }
 

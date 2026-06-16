@@ -15,7 +15,7 @@ def planner_node(state: ResearchState) -> dict:
     response = generate_flash(prompt)
     latency = round(time.time() - start, 3)
 
-    sub_questions = _parse_sub_questions(response.text)
+    sub_questions = _parse_sub_questions(response)
 
     return {
         "sub_questions": sub_questions,
@@ -23,7 +23,7 @@ def planner_node(state: ResearchState) -> dict:
             **state.get("report_metadata", {}),
             "planner_latency_s": latency,
             "planner_input_tokens": _count_tokens(prompt),
-            "planner_output_tokens": _count_tokens(response.text),
+            "planner_output_tokens": _count_tokens(response),
         },
     }
 

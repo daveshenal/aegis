@@ -22,7 +22,7 @@ def generate_flash(prompt: str):
         config=_generation_config,
     )
 
-    return response
+    return response.text
 
 
 def generate_pro(prompt: str):
@@ -32,4 +32,4 @@ def generate_pro(prompt: str):
         config=_generation_config,
     )
 
-    return response
+    return response.text
