@@ -6,3 +6,7 @@ __pycache__/
 
 # Environments
 .env
+
+# Terraform directories created locally
+.terraform/
+.terraform.lock.hcl
