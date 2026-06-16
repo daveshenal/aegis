@@ -1,22 +1,35 @@
-import google.generativeai as genai
+from google import genai
+from google.genai import types
+
 from app.config import settings
 
-genai.configure(api_key=settings.GEMINI_API_KEY)
 
-# Generation config shared across both models
-_generation_config = genai.GenerationConfig(
+client = genai.Client(
+    api_key=settings.GEMINI_API_KEY
+)
+
+
+_generation_config = types.GenerateContentConfig(
     temperature=0.3,
     max_output_tokens=4096,
 )
 
-# Flash — used for planner, critic, revisor (fast, cheap)
-gemini_flash = genai.GenerativeModel(
-    model_name="gemini-2.0-flash",
-    generation_config=_generation_config,
-)
 
-# Pro — used for writer (higher quality, more expensive)
-gemini_pro = genai.GenerativeModel(
-    model_name="gemini-2.5-pro",
-    generation_config=_generation_config,
-)
+def generate_flash(prompt: str):
+    response = client.models.generate_content(
+        model=settings.GEMINI_FLASH_MODEL,
+        contents=prompt,
+        config=_generation_config,
+    )
+
+    return response.text
+
+
+def generate_pro(prompt: str):
+    response = client.models.generate_content(
+        model=settings.GEMINI_PRO_MODEL,
+        contents=prompt,
+        config=_generation_config,
+    )
+
+    return response.text

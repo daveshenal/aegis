@@ -2,7 +2,7 @@ import json
 import time
 import uuid
 from app.graph.state import ResearchState, SubQuestion
-from app.llm.gemini import gemini_flash
+from app.llm.gemini import generate_flash
 from app.llm.prompts.planner_prompt import build_planner_prompt
 
 
@@ -12,10 +12,10 @@ def planner_node(state: ResearchState) -> dict:
     prompt = build_planner_prompt(query)
 
     start = time.time()
-    response = gemini_flash.generate_content(prompt)
+    response = generate_flash(prompt)
     latency = round(time.time() - start, 3)
 
-    sub_questions = _parse_sub_questions(response.text)
+    sub_questions = _parse_sub_questions(response)
 
     return {
         "sub_questions": sub_questions,
@@ -23,7 +23,7 @@ def planner_node(state: ResearchState) -> dict:
             **state.get("report_metadata", {}),
             "planner_latency_s": latency,
             "planner_input_tokens": _count_tokens(prompt),
-            "planner_output_tokens": _count_tokens(response.text),
+            "planner_output_tokens": _count_tokens(response),
         },
     }
 
@@ -58,5 +58,4 @@ def _parse_sub_questions(raw: str) -> list[SubQuestion]:
 
 def _count_tokens(text: str) -> int:
     # Rough approximation — 1 token ≈ 4 characters
-    # Replace with gemini_flash.count_tokens() if you want exact counts
     return len(text) // 4

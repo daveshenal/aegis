@@ -1,6 +1,6 @@
 import time
 from app.graph.state import ResearchState, RetrievedChunk
-from app.llm.gemini import gemini_pro
+from app.llm.gemini import generate_pro
 from app.llm.prompts.writer_prompt import build_writer_prompt
 
 
@@ -25,17 +25,17 @@ def report_writer_node(state: ResearchState) -> dict:
     )
 
     start = time.time()
-    response = gemini_pro.generate_content(prompt)
+    response = generate_pro(prompt)
     latency = round(time.time() - start, 3)
 
     return {
-        "draft_report": response.text,
+        "draft_report": response,
         "revision_count": revision_count + 1,
         "report_metadata": {
             **state.get("report_metadata", {}),
             f"writer_latency_s_pass_{revision_count + 1}": latency,
             f"writer_input_tokens_pass_{revision_count + 1}": len(prompt) // 4,
-            f"writer_output_tokens_pass_{revision_count + 1}": len(response.text) // 4,
+            f"writer_output_tokens_pass_{revision_count + 1}": len(response) // 4,
         },
     }
 
