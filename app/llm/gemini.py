@@ -11,7 +11,7 @@ _generation_config = genai.GenerationConfig(
 
 # Flash — used for planner, critic, revisor (fast, cheap)
 gemini_flash = genai.GenerativeModel(
-    model = settings.GEMINI_FLASH_MODEL,
+    model_name = settings.GEMINI_FLASH_MODEL,
     generation_config=_generation_config,
 )
 
