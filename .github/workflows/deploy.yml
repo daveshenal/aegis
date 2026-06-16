@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - "**/*.md"
+      - ".gitignore"
+      - "LICENSE"
 
 env:
   AWS_REGION: us-east-1
