@@ -17,7 +17,8 @@ This guide covers the infrastructure side of Aegis. As a DevOps engineer on this
 7. [Project Files](#step-7--set-up-project-files)
 8. [Write & Apply Terraform](#step-8--write-and-apply-terraform)
 9. [Build & Push Docker Image](#step-9--build-and-push-the-docker-image)
-10. [CI/CD with GitHub Actions](#step-10--cicd-with-github-actions)
+10. [Deploy and Verify on ECS](#step-10--deploy-and-verify-on-ecs)
+11. [CI/CD with GitHub Actions](#step-11--cicd-with-github-actions)
 
 ---
 
@@ -64,6 +65,7 @@ This IAM user (`aegis-dev`) is what your local AWS CLI, Terraform, and CI/CD pip
 | `AmazonEC2ContainerRegistryFullAccess` | Push and pull Docker images to ECR                 |
 | `CloudWatchLogsFullAccess`             | Write and read application logs                    |
 | `IAMFullAccess`                        | Allow Terraform to create ECS task execution roles |
+| `AmazonSSMFullAccess`                  |                                                    |
 
 7. Click **Create user**
 8. Open the user → **Security credentials** tab → **Create access key**
@@ -323,7 +325,126 @@ The push will take a few minutes as it uploads image layers to ECR. Once complet
 
 ---
 
-## Step 10 - CI/CD with GitHub Actions
+## Step 10 - Deploy and Verify on ECS
+
+### Store Secrets in SSM Parameter Store
+
+Before triggering a deployment, store the application secrets in AWS SSM. Run these one by one, replacing the placeholder values with your real keys:
+
+```bash
+aws ssm put-parameter \
+  --name "/aegis/GEMINI_API_KEY" \
+  --value "your-actual-gemini-key" \
+  --type SecureString \
+  --region us-east-1
+
+aws ssm put-parameter \
+  --name "/aegis/PINECONE_API_KEY" \
+  --value "your-actual-pinecone-key" \
+  --type SecureString \
+  --region us-east-1
+
+aws ssm put-parameter \
+  --name "/aegis/PINECONE_INDEX_NAME" \
+  --value "aegis-index" \
+  --type SecureString \
+  --region us-east-1
+
+aws ssm put-parameter \
+  --name "/aegis/LANGCHAIN_API_KEY" \
+  --value "your-actual-langchain-key" \
+  --type SecureString \
+  --region us-east-1
+```
+
+### Force a New ECS Deployment
+
+Now tell ECS to pull the image from ECR and start a container:
+
+```bash
+aws ecs update-service \
+  --cluster aegis-cluster \
+  --service aegis-service \
+  --force-new-deployment \
+  --region us-east-1
+```
+
+Press `q` to exit the output view.
+
+### Watch Deployment Status
+
+```bash
+aws ecs describe-services \
+  --cluster aegis-cluster \
+  --services aegis-service \
+  --region us-east-1 \
+  --query "services[0].{Status:status,Desired:desiredCount,Running:runningCount,Pending:pendingCount}"
+```
+
+You want to see:
+
+```json
+{
+    "Status": "ACTIVE",
+    "Desired": 1,
+    "Running": 1,
+    "Pending": 0
+}
+```
+
+It may take 1–2 minutes for `Running` to reach `1`. If it still shows `0`, wait 30 seconds and run the command again.
+
+### Find the Public IP
+
+Get the task ARN first:
+
+```bash
+TASK_ARN=$(aws ecs list-tasks \
+  --cluster aegis-cluster \
+  --service-name aegis-service \
+  --region us-east-1 \
+  --query "taskArns[0]" \
+  --output text)
+
+echo $TASK_ARN
+```
+
+Get the network interface ID from that task:
+
+```bash
+aws ecs describe-tasks \
+  --cluster aegis-cluster \
+  --tasks $TASK_ARN \
+  --region us-east-1 \
+  --query "tasks[0].attachments[0].details[?name=='networkInterfaceId'].value" \
+  --output text
+```
+
+Use that network interface ID to get the public IP:
+
+```bash
+aws ec2 describe-network-interfaces \
+  --network-interface-ids <network-interface-id> \
+  --region us-east-1 \
+  --query "NetworkInterfaces[0].Association.PublicIp" \
+  --output text
+```
+
+### Health Check
+
+```bash
+curl http://<Public IP>:8000/health
+```
+
+Expected response:
+
+```json
+{"status": "ok"}
+```
+
+---
+
+## Step 11 - CI/CD with GitHub Actions
 
 The project includes a GitHub Actions workflow at `.github/workflows/deploy.yml` that automates build, push to ECR, and deploy to ECS on every push to `main`.
 
