@@ -5,7 +5,7 @@ from app.config import settings
 
 def configure_llama_settings() -> None:
     LlamaSettings.embed_model = GeminiEmbedding(
-        model_name="models/text-embedding-001",
+        model_name="models/gemini-embedding-001",
         api_key=settings.GEMINI_API_KEY,
         output_dimensionality=768,
     )
