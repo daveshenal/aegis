@@ -1,6 +1,6 @@
 import time
 from app.graph.state import ResearchState
-from app.llm.gemini import gemini_flash
+from app.llm.gemini import generate_flash
 from app.llm.prompts.revisor_prompt import build_revisor_prompt
 
 
@@ -24,7 +24,7 @@ def report_revisor_node(state: ResearchState) -> dict:
     )
 
     start = time.time()
-    response = gemini_flash.generate_content(prompt)
+    response = generate_flash(prompt)
     latency = round(time.time() - start, 3)
 
     return {
