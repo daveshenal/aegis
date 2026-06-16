@@ -10,12 +10,12 @@ langchain-core==0.2.22
 langsmith==0.1.77
 
 # LLM — Gemini
-google.genai
+google-genai==2.8.0
 
 # Retrieval — LlamaIndex + Pinecone (aligned on llama-index-core 0.13.x)
 llama-index-core==0.13.6
 llama-index-vector-stores-pinecone==0.8.0
-llama-index-embeddings-google-genai
+llama-index-embeddings-google-genai==0.5.1
 pinecone==7.3.0
 
 # AWS
