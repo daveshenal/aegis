@@ -1,6 +1,6 @@
 import time
 from app.graph.state import ResearchState
-from app.llm.gemini import gemini_flash
+from app.llm.gemini import generate_flash
 from app.llm.prompts.critic_prompt import build_critic_prompt
 from app.evaluation.judge import parse_eval_result
 
@@ -18,10 +18,10 @@ def report_critic_node(state: ResearchState) -> dict:
     )
 
     start = time.time()
-    response = gemini_flash.generate_content(prompt)
+    response = generate_flash(prompt)
     latency = round(time.time() - start, 3)
 
-    eval_result = parse_eval_result(response.text)
+    eval_result = parse_eval_result(response)
 
     return {
         "eval_result": eval_result,
@@ -31,6 +31,6 @@ def report_critic_node(state: ResearchState) -> dict:
             f"critic_score_pass_{revision_count}": eval_result["overall_score"],
             f"critic_passed_pass_{revision_count}": eval_result["passed"],
             f"critic_input_tokens_pass_{revision_count}": len(prompt) // 4,
-            f"critic_output_tokens_pass_{revision_count}": len(response.text) // 4,
+            f"critic_output_tokens_pass_{revision_count}": len(response) // 4,
         },
     }
