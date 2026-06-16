@@ -4,6 +4,8 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     # Gemini
     GEMINI_API_KEY: str
+    GEMINI_FLASH_MODEL: str
+    GEMINI_PRO_MODEL: str
 
     # Pinecone
     PINECONE_API_KEY: str
