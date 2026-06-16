@@ -34,7 +34,7 @@ resource "aws_ecs_task_definition" "app" {
     # For now we reference them as plain env vars - you will update this later
     environment = [
       { name = "GEMINI_FLASH_MODEL",    value = "gemini-3.1-flash-lite" },
-      { name = "GEMINI_PRO_MODEL",      value = "gemini-3.1-flash-preview" },
+      { name = "GEMINI_PRO_MODEL",      value = "gemini-flash-latest" },
       { name = "S3_BUCKET_NAME",        value = var.s3_bucket_name },
       { name = "AWS_REGION",            value = var.aws_region },
       { name = "LANGCHAIN_TRACING_V2",  value = "true" },
