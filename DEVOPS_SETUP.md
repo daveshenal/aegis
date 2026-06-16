@@ -17,11 +17,7 @@ This guide walks you through setting up all the accounts, tools, and local envir
    - [AWS CLI](#step-1--install-aws-cli)
    - [Terraform](#step-2--install-terraform)
    - [Docker](#step-3--install-docker-inside-wsl)
-   - [Python & Git](#step-4--install-python-and-git)
    - [Project Files](#step-5--set-up-your-project-in-wsl)
-   - [Python Virtual Environment](#step-6--set-up-your-python-virtual-environment)
-   - [.env File](#step-7--create-your-env-file)
-   - [Local Verification](#step-8--verify-everything-works-locally-before-touching-aws)
 
 ---
 
@@ -94,8 +90,10 @@ This guide walks you through setting up all the accounts, tools, and local envir
 6. Search and attach these policies:
    - `AmazonS3FullAccess`
    - `AmazonECS_FullAccess`
+   - `AmazonEC2FullAccess`
    - `AmazonEC2ContainerRegistryFullAccess`
    - `CloudWatchLogsFullAccess`
+   - `IAMFullAccess`
 7. Click **Create user**
 8. Open the user → **Security credentials** tab → **Create access key**
 9. Select **"Application running outside AWS"**
@@ -305,19 +303,7 @@ docker compose version
 
 ---
 
-### Step 4 - Install Python and Git
-
-```bash
-sudo apt-get install -y python3 python3-pip python3-venv git
-
-# Verify
-python3 --version
-git --version
-```
-
----
-
-### Step 5 - Set up your project in WSL
+### Step 4 - Set up your project in WSL
 
 > **Important:** Keep your project files inside WSL's filesystem (`/home/yourname/`), not on your Windows C: drive. This is faster and avoids permission issues.
 
@@ -328,73 +314,82 @@ cd ~
 # Create a projects folder
 mkdir projects && cd projects
 
+# Install git if you don't have it
+sudo apt-get install -y git
+
 # Clone the repo
 git clone https://github.com/daveshenal/aegis.git
 cd aegis
 ```
 
----
-
-### Step 6 - Set up your Python virtual environment
+Get your account ID
 
 ```bash
-# Inside the project directory
-python3 -m venv venv
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
+aws sts get-caller-identity
 ```
 
----
-
-### Step 7 - Create your `.env` file
+Replace with your account ID
 
 ```bash
-cp .env.example .env
-nano .env
+aws s3api create-bucket \
+  --bucket aegis-tfstate-<AWS-account-ID> \
+  --region us-east-1
+
+aws s3api put-bucket-versioning \
+  --bucket aegis-tfstate-<AWS-account-ID> \
+  --versioning-configuration Status=Enabled
+
 ```
 
-Fill in your real values:
+```bash
+cd infra
 
-- `GEMINI_API_KEY`
-- `PINECONE_API_KEY`
-- `PINECONE_INDEX_NAME`
-- `AWS_ACCESS_KEY_ID`
-- `AWS_SECRET_ACCESS_KEY`
-- `LANGCHAIN_API_KEY`
+# Downloads the AWS provider plugin and connects to the S3 backend we created
+terraform init
 
-Save with `Ctrl+O`, exit with `Ctrl+X`.
+# Previews what AWS resources will be created without actually creating anything
+terraform plan
 
----
+# Ready to create everything. Run
+terraform apply
+```
 
-### Step 8 - Verify everything works locally before touching AWS
+It will show the same plan and ask you to type yes to confirm. Type yes
 
-**Start the local stack:**
+Store the ECR URL
 
 ```bash
-# Make sure Docker is running
+export ECR_URL="<AWS-account-ID>.dkr.ecr.us-east-1.amazonaws.com/aegis"
+```
+
+Go back to your project root and start Docker:
+
+```bash
+cd ~/projects/aegis
 sudo service docker start
-
-# Start the API and MLflow locally
-docker compose up --build
 ```
 
-**Open your browser and check:**
-
-| URL                          | Expected                               |
-| ---------------------------- | -------------------------------------- |
-| `http://localhost:8000/docs` | FastAPI Swagger UI with your endpoints |
-| `http://localhost:5000`      | MLflow UI                              |
-
-If both load, your entire local stack is working correctly.
-
-**Test the API directly:**
+Now authenticate Docker to ECR — this lets Docker push images to your AWS container registry:
 
 ```bash
-curl -X POST http://localhost:8000/research \
-  -H "Content-Type: application/json" \
-  -d '{"query": "What are the main approaches to retrieval-augmented generation?"}'
+aws ecr get-login-password --region us-east-1 | \
+  docker login --username AWS --password-stdin \
+  <AWS-account-ID>.dkr.ecr.us-east-1.amazonaws.com
 ```
 
-You should get a JSON response with a generated report. If you do, you're all set. ✅
+You should see: Login Succeeded
+
+Now build the image. This reads your Dockerfile and packages the entire application into a Docker image. This will take a few minutes — it's downloading the base Python image and installing all dependencies from requirements.txt
+
+```bash
+docker build -t aegis .
+```
+
+Now tag the image with the ECR URL and push it:
+
+```bash
+docker tag aegis:latest $ECR_URL:latest
+docker push $ECR_URL:latest
+```
+
+This will take a few minutes — it's uploading all the image layers to ECR
