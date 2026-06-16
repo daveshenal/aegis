@@ -33,6 +33,8 @@ resource "aws_ecs_task_definition" "app" {
     # In production these come from AWS Secrets Manager or SSM Parameter Store
     # For now we reference them as plain env vars - you will update this later
     environment = [
+      { name = "GEMINI_FLASH_MODEL",    value = "gemini-flash-latest" },
+      { name = "GEMINI_PRO_MODEL",      value = "gemini-2.5-pro" },
       { name = "S3_BUCKET_NAME",        value = var.s3_bucket_name },
       { name = "AWS_REGION",            value = var.aws_region },
       { name = "LANGCHAIN_TRACING_V2",  value = "true" },
