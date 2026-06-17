@@ -19,6 +19,7 @@ This guide covers the infrastructure side of Aegis. As a DevOps engineer on this
 9. [Build & Push Docker Image](#step-9--build-and-push-the-docker-image)
 10. [Deploy and Verify on ECS](#step-10--deploy-and-verify-on-ecs)
 11. [CI/CD with GitHub Actions](#step-11--cicd-with-github-actions)
+12. [Tear Down Infrastructure](#step-12--tear-down-infrastructure)
 
 ---
 
@@ -65,7 +66,7 @@ This IAM user (`aegis-dev`) is what your local AWS CLI, Terraform, and CI/CD pip
 | `AmazonEC2ContainerRegistryFullAccess` | Push and pull Docker images to ECR                 |
 | `CloudWatchLogsFullAccess`             | Write and read application logs                    |
 | `IAMFullAccess`                        | Allow Terraform to create ECS task execution roles |
-| `AmazonSSMFullAccess`                  |                                                    |
+| `AmazonSSMFullAccess`                  | Read secrets from SSM Parameter Store              |
 
 7. Click **Create user**
 8. Open the user → **Security credentials** tab → **Create access key**
@@ -218,7 +219,7 @@ docker compose version
 ```bash
 cd ~
 mkdir projects && cd projects
-git clone https://github.com/daveshenal/aegis.git
+git clone -b practice https://github.com/daveshenal/aegis.git
 cd aegis
 ```
 
@@ -345,12 +346,6 @@ aws ssm put-parameter \
   --region us-east-1
 
 aws ssm put-parameter \
-  --name "/aegis/PINECONE_INDEX_NAME" \
-  --value "aegis-index" \
-  --type SecureString \
-  --region us-east-1
-
-aws ssm put-parameter \
   --name "/aegis/LANGCHAIN_API_KEY" \
   --value "your-actual-langchain-key" \
   --type SecureString \
@@ -385,10 +380,10 @@ You want to see:
 
 ```json
 {
-    "Status": "ACTIVE",
-    "Desired": 1,
-    "Running": 1,
-    "Pending": 0
+  "Status": "ACTIVE",
+  "Desired": 1,
+  "Running": 1,
+  "Pending": 0
 }
 ```
 
@@ -412,19 +407,21 @@ echo $TASK_ARN
 Get the network interface ID from that task:
 
 ```bash
-aws ecs describe-tasks \
+ENI=$(aws ecs describe-tasks \
   --cluster aegis-cluster \
   --tasks $TASK_ARN \
   --region us-east-1 \
   --query "tasks[0].attachments[0].details[?name=='networkInterfaceId'].value" \
-  --output text
+  --output text)
+
+echo $ENI
 ```
 
 Use that network interface ID to get the public IP:
 
 ```bash
 aws ec2 describe-network-interfaces \
-  --network-interface-ids <network-interface-id> \
+  --network-interface-ids $ENI \
   --region us-east-1 \
   --query "NetworkInterfaces[0].Association.PublicIp" \
   --output text
@@ -439,16 +436,25 @@ curl http://<Public IP>:8000/health
 Expected response:
 
 ```json
-{"status": "ok"}
+{ "status": "ok" }
+```
+
+### Test the Research Endpoint
+
+```bash
+curl -X POST http://<Public IP>:8000/research \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What are the main approaches to retrieval-augmented generation?"}' \
+  --max-time 120
 ```
 
 ---
 
 ## Step 11 - CI/CD with GitHub Actions
 
-The project includes a GitHub Actions workflow at `.github/workflows/deploy.yml` that automates build, push to ECR, and deploy to ECS on every push to `main`.
+The `practice` branch includes an empty `.github/workflows/` folder. Your task is to write a `deploy.yml` workflow that automates build, push to ECR, and deploy to ECS on every push to `main`.
 
-Add the following secrets to the GitHub repository under **Settings → Secrets and variables → Actions**:
+Add the following secrets to your GitHub repository under **Settings → Secrets and variables → Actions**:
 
 | Secret                  | Value                               |
 | ----------------------- | ----------------------------------- |
@@ -456,21 +462,88 @@ Add the following secrets to the GitHub repository under **Settings → Secrets 
 | `AWS_SECRET_ACCESS_KEY` | From the IAM user created in Step 2 |
 | `AWS_REGION`            | `us-east-1`                         |
 
-Then review and update `deploy.yml` to match the ECR repository URL and ECS cluster/service names that Terraform created.
+Your workflow should:
+1. Trigger on push to `main`
+2. Authenticate to ECR
+3. Build and push the Docker image
+4. Force a new ECS deployment
+
+---
+
+## Step 12 - Tear Down Infrastructure
+
+> ⚠️ **Do this when you are done practising** to avoid ongoing AWS charges. ECS Fargate costs ~$0.013/hour even when idle.
+
+### Delete the ECR Images First
+
+Terraform cannot delete an ECR repository that still contains images. Delete them manually first:
+
+```bash
+aws ecr delete-repository \
+  --repository-name aegis \
+  --force \
+  --region us-east-1
+```
+
+### Destroy All Terraform Resources
+
+```bash
+cd ~/projects/aegis/infra
+terraform destroy
+```
+
+Type `yes` when prompted. This will remove the ECS cluster, service, task definition, IAM roles, S3 bucket, security groups, and CloudWatch log group.
+
+### What Is NOT Deleted
+
+The following are created manually and will remain after `terraform destroy`:
+
+- SSM parameters (`/aegis/GEMINI_API_KEY` etc) — delete manually if needed:
+
+```bash
+aws ssm delete-parameter --name "/aegis/GEMINI_API_KEY" --region us-east-1
+aws ssm delete-parameter --name "/aegis/PINECONE_API_KEY" --region us-east-1
+aws ssm delete-parameter --name "/aegis/PINECONE_INDEX_NAME" --region us-east-1
+aws ssm delete-parameter --name "/aegis/LANGCHAIN_API_KEY" --region us-east-1
+```
+
+- Terraform state S3 bucket — delete manually if needed:
+
+```bash
+aws s3 rb s3://aegis-tfstate-<AWS-account-ID> --force
+```
+
+### Verify Everything Is Gone
+
+```bash
+aws ecs list-clusters --region us-east-1
+aws ecr describe-repositories --region us-east-1
+aws s3 ls
+```
+
+All three should return empty results.
 
 ---
 
 ## Environment Variable Reference
 
-The full list of environment variables the application requires. Developer-facing ones are managed by the developer; infrastructure-related ones are your responsibility as ECS task environment variables or Secrets Manager entries.
+The full list of environment variables the application requires. Developer-facing ones are managed by the developer; infrastructure-related ones are your responsibility as ECS task environment variables or SSM Parameter Store entries.
 
-| Variable                | Owner     | Source               |
-| ----------------------- | --------- | -------------------- |
-| `GEMINI_API_KEY`        | Developer | Google AI Studio     |
-| `PINECONE_API_KEY`      | Developer | Pinecone dashboard   |
-| `PINECONE_INDEX_NAME`   | Developer | `aegis-index`        |
-| `LANGCHAIN_API_KEY`     | Developer | LangSmith dashboard  |
-| `AWS_ACCESS_KEY_ID`     | DevOps    | IAM user `aegis-dev` |
-| `AWS_SECRET_ACCESS_KEY` | DevOps    | IAM user `aegis-dev` |
+| Variable                | How to Handle                              |
+| ----------------------- | ------------------------------------------ |
+| `GEMINI_API_KEY`        | Store in SSM Parameter Store as SecureString |
+| `GEMINI_FLASH_MODEL`    | Hardcode in ECS task definition `environment` block |
+| `GEMINI_PRO_MODEL`      | Hardcode in ECS task definition `environment` block |
+| `PINECONE_API_KEY`      | Store in SSM Parameter Store as SecureString |
+| `PINECONE_INDEX_NAME`   | Hardcode in ECS task definition `environment` block |
+| `LANGCHAIN_API_KEY`     | Store in SSM Parameter Store as SecureString |
+| `LANGCHAIN_TRACING_V2`  | Hardcode in ECS task definition `environment` block |
+| `LANGCHAIN_PROJECT`     | Hardcode in ECS task definition `environment` block |
+| `MAX_REVISIONS`         | Hardcode in ECS task definition `environment` block |
+| `MLFLOW_TRACKING_URI`   | Hardcode in ECS task definition `environment` block |
+| `AWS_ACCESS_KEY_ID`     | Add as GitHub Actions secret               |
+| `AWS_SECRET_ACCESS_KEY` | Add as GitHub Actions secret               |
+| `S3_BUCKET_NAME`        | Pass as Terraform variable                 |
+| `AWS_REGION`            | Pass as Terraform variable                 |
 
-> ⚠️ Never hardcode secrets in Terraform files or GitHub Actions YAML. Use AWS Secrets Manager or GitHub Encrypted Secrets.
+> ⚠️ Never hardcode secrets in Terraform files or GitHub Actions YAML. Use SSM Parameter Store or GitHub Encrypted Secrets.
